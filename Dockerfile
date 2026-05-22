@@ -1,7 +1,10 @@
 # Usamos la ruta alternativa de Docker Hub para evadir el filtro de Coolify
 FROM docker.io/library/ubuntu:26.04 AS build_env
 
-# Instalamos el script oficial de Microsoft para obtener .NET 9 de forma nativa
+# Evitar diálogos interactivos molestos durante la compilación
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Instalar el script oficial de Microsoft para obtener .NET 9 de forma nativa
 RUN apt-get update && apt-get install -y wget bash \
     && wget https://dot.net -O dotnet-install.sh \
     && chmod +x dotnet-install.sh \
@@ -19,7 +22,9 @@ COPY . ./
 RUN dotnet publish -c Release -o /app/out
 
 # Fase final de ejecución usando Ubuntu limpio
-FROM docker.io/library/ubuntu:24.04 AS runtime
+FROM docker.io/library/ubuntu:26.04 AS runtime
+ENV DEBIAN_FRONTEND=noninteractive
+
 RUN apt-get update && apt-get install -y libicu-dev libssl-dev tzdata openssl \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
