@@ -1,0 +1,8 @@
+toml[phases.setup]
+nixPkgs = ["dotnet-sdk_9"]
+
+[phases.build]
+cmds = ["dotnet publish -c Release -o out"]
+
+[start]
+cmd = ["dotnet out/To-Do-List1.dll"]
