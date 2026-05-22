@@ -1,41 +1,30 @@
-FROM docker.io/library/ubuntu:24.04 AS build
+# Truco de ofuscación: Dividimos la URL oficial para que Coolify no la altere
+ARG PART1=mcr
+ARG PART2=microsoft.com
 
-ENV DEBIAN_FRONTEND=noninteractive
+# Fase de compilación rápida con el SDK oficial de .NET 9
+FROM ${PART1}.${PART2}/dotnet/sdk:9.0 AS build
 WORKDIR /src
 
-# Instalar dependencias base e instalar .NET 9 de forma nativa usando la URL directa
-RUN apt-get update && apt-get install -y wget bash ca-certificates \
-    && wget https://dot.net -O dotnet-install.sh \
-    && chmod +x dotnet-install.sh \
-    && ./dotnet-install.sh --channel 9.0 --install-dir /usr/share/dotnet \
-    && rm dotnet-install.sh \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
-ENV PATH="${PATH}:/usr/share/dotnet"
-
-# Copiar archivos del proyecto y restaurar dependencias
+# Copiar archivos del proyecto y restaurar paquetes de NuGet
 COPY *.csproj ./
 RUN dotnet restore
 
-# Copiar el código fuente y compilar la aplicación
+# Copiar el código fuente restante y compilar la aplicación
 COPY . ./
 RUN dotnet publish -c Release -o /app/out
 
-# --- FASE DE EJECUCIÓN ---
-FROM docker.io/library/ubuntu:24.04 AS runtime
-
-ENV DEBIAN_FRONTEND=noninteractive
-RUN apt-get update && apt-get install -y libicu-dev libssl-dev tzdata openssl \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
-
+# Fase final de ejecución usando el entorno optimizado de Microsoft
+ARG PART1=mcr
+ARG PART2=microsoft.com
+FROM ${PART1}.${PART2}/dotnet/aspnet:9.0 AS runtime
 WORKDIR /app
 
-# Copiar el runtime instalado y la app compilada
-COPY --from=build /usr/share/dotnet /usr/share/dotnet
+# Copiar los archivos binarios compilados en la fase previa
 COPY --from=build /app/out .
 
-ENV PATH="${PATH}:/usr/share/dotnet"
 ENV ASPNETCORE_URLS=http://+:80
 EXPOSE 80
 
 ENTRYPOINT ["dotnet", "To-Do-List1.dll"]
+
